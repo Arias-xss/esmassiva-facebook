@@ -163,7 +163,7 @@ const puppeteer = require('puppeteer'); // v22.0.0 or later
             return computedStyle.fontWeight;
           })
 
-        console.log(`Mensaje leido? ${selectorMessage == '600' ? 'Si' : 'No'}`)
+        console.log(`Mensaje leido? ${selectorMessage != '600' ? 'Si' : 'No'}`)
 
         if (selectorMessage == '600') {
           await puppeteer.Locator.race([
