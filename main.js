@@ -129,20 +129,13 @@ const password = process.env.PASSWORD;
   }
   {
     const targetPage = page;
-    await puppeteer.Locator.race([
-      targetPage.locator('div.x13vifvy > div > div > div > div:nth-of-type(2) a'),
-      targetPage.locator('::-p-xpath(//*[@id=\\"mount_0_0_lA\\"]/div/div[1]/div/div[2]/div[5]/div[2]/div/div[2]/div[1]/div[1]/div/div/div/div/div/div/div[1]/div/div/div/div[2]/div/span/a)'),
-      targetPage.locator(':scope >>> div.x13vifvy > div > div > div > div:nth-of-type(2) a'),
-      targetPage.locator('::-p-text(Ver todo en Messenger)')
-    ])
-      .setTimeout(timeout)
-      .click({
-        offset: {
-          x: 106.8125,
-          y: 11.984375,
-        },
-      });
-
+    const promises = [];
+    const startWaitingForEvents = () => {
+      promises.push(targetPage.waitForNavigation());
+    }
+    startWaitingForEvents();
+    await targetPage.goto('https://www.facebook.com/messages/t');
+    await Promise.all(promises);
   }
 
   {
@@ -161,8 +154,6 @@ const password = process.env.PASSWORD;
       });
 
     console.log('Ingreso al marketplace')
-
-    console.log(await targetPage.evaluate(() => document.querySelector('[aria-label="¿Continuar sin sincronizar?"] > div:nth-of-type(3) > div > div > div:nth-of-type(2)') !== null))
 
     if (await targetPage.evaluate(() => document.querySelector('[aria-label="¿Continuar sin sincronizar?"] > div:nth-of-type(3) > div > div > div:nth-of-type(2)') !== null)) {
       console.log('Pide PIN para continuar')
@@ -196,6 +187,31 @@ const password = process.env.PASSWORD;
     console.log("Empieza a responder los mensajes")
 
     setInterval(async () => {
+      if (await targetPage.evaluate(() => document.querySelector('[aria-label="¿Continuar sin sincronizar?"] > div:nth-of-type(3) > div > div > div:nth-of-type(2)') !== null)) {
+        console.log('Pide PIN para continuar')
+
+        await puppeteer.Locator.race([
+          targetPage.locator('[aria-label="¿Continuar sin sincronizar?"] > div:nth-of-type(3) > div > div > div:nth-of-type(2)'),
+        ])
+          .setTimeout(timeout)
+          .click();
+
+        await puppeteer.Locator.race([
+          targetPage.locator('div.x9f619 > div.x2lah0s div:nth-of-type(2) > div > div:nth-of-type(1) > div > div > div > div > div > div > div > div > div > div > div.x1iyjqo2 > div > div > div > div > div:nth-of-type(2) div'),
+          targetPage.locator('::-p-xpath(//*[@id=\\":r23:\\"]/div/div/div/div/div/div[2]/div/div[1]/div/div/div/div/div/div/div/div/div/div/div[2]/div/div/div/div/div[2]/span/span/div)'),
+          targetPage.locator(':scope >>> div.x9f619 > div.x2lah0s div:nth-of-type(2) > div > div:nth-of-type(1) > div > div > div > div > div > div > div > div > div > div > div.x1iyjqo2 > div > div > div > div > div:nth-of-type(2) div')
+        ])
+          .setTimeout(timeout)
+          .click({
+            offset: {
+              x: 47,
+              y: 1.515625,
+            },
+          });
+
+        console.log('Pin cerrado con exito!')
+      }
+
       for (const index of [1, 2, 3, 4, 5, 6]) {
         await targetPage.waitForSelector(`[aria-label="Lista de conversaciones"] > div > div:nth-of-type(1) > div:nth-of-type(2) > div > div > div > div > div > div > div:nth-of-type(2) > div > div:nth-of-type(${index}) > div > div > div > div > div > div > div > a > div > div> div:nth-of-type(2) > div > div > div > span`)
 
@@ -230,7 +246,7 @@ const password = process.env.PASSWORD;
           await puppeteer.Locator.race([
             targetPage.locator('[aria-label="Mensaje"]'),
             targetPage.locator('p-aria(Mensaje)'),
-          ]).fill(`Buenas. Si. 😄 Cada pedido es procesado  por Whatsapp ✅ Podes escribirme al Whatsapp 0${phoneNumber} O directo en el link https://wa.me/595${phoneNumber}?text=${encodeURIComponent('Buenas, quisiera mas informacion sobre este producto ' + cleanText)} 😊 \n`)
+          ]).fill(`Buenas. Si. 😄 Cada pedido es procesado  por Whatsapp ✅ Podes escribirme al Whatsapp 0${phoneNumber} O directo en el link https://wa.me/595${phoneNumber}?text=${encodeURIComponent('Buenas, quisiera mas informacion sobre este producto: ')} 😊 \n`)
 
           console.log(`Mensaje respondido a este producto: ${cleanText}`)
         }
