@@ -114,21 +114,6 @@ const password = process.env.PASSWORD;
   }
   {
     const targetPage = page;
-    await puppeteer.Locator.race([
-      targetPage.locator('[aria-label="Messenger"]')
-    ])
-      .setTimeout(timeout)
-      .click({
-        offset: {
-          x: 33,
-          y: 21,
-        },
-      });
-
-    console.log('Ingreso a todos los mensajes')
-  }
-  {
-    const targetPage = page;
     const promises = [];
     const startWaitingForEvents = () => {
       promises.push(targetPage.waitForNavigation());
