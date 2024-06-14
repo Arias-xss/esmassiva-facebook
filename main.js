@@ -6,13 +6,13 @@ const emailAddress = process.env.EMAIL;
 const password = process.env.PASSWORD;
 
 (async () => {
-  const browser = await puppeteer.launch();
+  const browser = await puppeteer.launch({ headless: false });
 
   const context = browser.defaultBrowserContext()
   await context.overridePermissions('https://www.facebook.com/', ['notifications'])
 
   const page = await browser.newPage();
-  const timeout = 30000;
+  const timeout = 3000000;
   page.setDefaultTimeout(timeout);
 
   {
@@ -125,53 +125,24 @@ const password = process.env.PASSWORD;
 
   {
     const targetPage = page;
-    await puppeteer.Locator.race([
-      targetPage.locator('div.x9f619 > div.x2lah0s div:nth-of-type(2) > div > div:nth-of-type(1) > div > div > div > div > div > div > div > div > div > div > div.x1iyjqo2 > div > div > div > div > div:nth-of-type(2) div'),
-      targetPage.locator('::-p-xpath(//*[@id=\\":r23:\\"]/div/div/div/div/div/div[2]/div/div[1]/div/div/div/div/div/div/div/div/div/div/div[2]/div/div/div/div/div[2]/span/span/div)'),
-      targetPage.locator(':scope >>> div.x9f619 > div.x2lah0s div:nth-of-type(2) > div > div:nth-of-type(1) > div > div > div > div > div > div > div > div > div > div > div.x1iyjqo2 > div > div > div > div > div:nth-of-type(2) div')
-    ])
-      .setTimeout(timeout)
-      .click({
-        offset: {
-          x: 47,
-          y: 1.515625,
-        },
-      });
+
+    await page.waitForSelector('body', { timeout });
 
     console.log('Ingreso al marketplace')
 
-    if (await targetPage.evaluate(() => document.querySelector('[aria-label="¿Continuar sin sincronizar?"] > div:nth-of-type(3) > div > div > div:nth-of-type(2)') !== null)) {
-      console.log('Pide PIN para continuar')
+    await new Promise((resolve, reject) => {
+      setTimeout(() => {
+        resolve("Eseprandoooo")
+      }, 10000);
+    })
 
+    if (await targetPage.evaluate(() => document.querySelector('[aria-label="Cerrar"]') !== null)) {
       await puppeteer.Locator.race([
-        targetPage.locator('[aria-label="¿Continuar sin sincronizar?"] > div:nth-of-type(3) > div > div > div:nth-of-type(2)'),
+        targetPage.locator('[aria-label="Cerrar"]'),
       ])
         .setTimeout(timeout)
         .click();
 
-      await puppeteer.Locator.race([
-        targetPage.locator('div.x9f619 > div.x2lah0s div:nth-of-type(2) > div > div:nth-of-type(1) > div > div > div > div > div > div > div > div > div > div > div.x1iyjqo2 > div > div > div > div > div:nth-of-type(2) div'),
-        targetPage.locator('::-p-xpath(//*[@id=\\":r23:\\"]/div/div/div/div/div/div[2]/div/div[1]/div/div/div/div/div/div/div/div/div/div/div[2]/div/div/div/div/div[2]/span/span/div)'),
-        targetPage.locator(':scope >>> div.x9f619 > div.x2lah0s div:nth-of-type(2) > div > div:nth-of-type(1) > div > div > div > div > div > div > div > div > div > div > div.x1iyjqo2 > div > div > div > div > div:nth-of-type(2) div')
-      ])
-        .setTimeout(timeout)
-        .click({
-          offset: {
-            x: 47,
-            y: 1.515625,
-          },
-        });
-
-      console.log('Pin cerrado con exito!')
-    }
-  }
-
-  {
-    const targetPage = page;
-
-    console.log("Empieza a responder los mensajes")
-
-    setInterval(async () => {
       if (await targetPage.evaluate(() => document.querySelector('[aria-label="¿Continuar sin sincronizar?"] > div:nth-of-type(3) > div > div > div:nth-of-type(2)') !== null)) {
         console.log('Pide PIN para continuar')
 
@@ -195,6 +166,78 @@ const password = process.env.PASSWORD;
           });
 
         console.log('Pin cerrado con exito!')
+      }
+    }
+
+    const elementFound = await page.evaluate(() => {
+      // Usa XPath para encontrar el elemento
+      const xpath = "//span[contains(text(), 'Marketplace')]";
+      const result = document.evaluate(xpath, document, null, XPathResult.FIRST_ORDERED_NODE_TYPE, null);
+      const element = result.singleNodeValue;
+
+      if (element) {
+        // Simula un clic en el elemento
+        element.click();
+        return true;
+      } else {
+        return false;
+      }
+    });
+
+    if (elementFound) {
+      console.log('Elemento encontrado y clicado');
+    } else {
+      console.log('Elemento no encontrado');
+    }
+  }
+
+  {
+    const targetPage = page;
+
+    console.log("Empieza a responder los mensajes")
+
+    await page.evaluate(() => {
+      // Usa XPath para encontrar el elemento
+      const xpath = "//span[contains(text(), 'Marketplace')]";
+      const result = document.evaluate(xpath, document, null, XPathResult.FIRST_ORDERED_NODE_TYPE, null);
+      const element = result.singleNodeValue;
+
+      if (element) {
+        // Simula un clic en el elemento
+        element.click();
+        return true;
+      } else {
+        return false;
+      }
+    });
+
+    setInterval(async () => {
+      console.log("Controlando...")
+      if (await targetPage.evaluate(() => document.querySelector('[aria-label="Cerrar"]') !== null)) {
+        if (await targetPage.evaluate(() => document.querySelector('[aria-label="¿Continuar sin sincronizar?"] > div:nth-of-type(3) > div > div > div:nth-of-type(2)') !== null)) {
+          console.log('Pide PIN para continuar')
+
+          await puppeteer.Locator.race([
+            targetPage.locator('[aria-label="¿Continuar sin sincronizar?"] > div:nth-of-type(3) > div > div > div:nth-of-type(2)'),
+          ])
+            .setTimeout(timeout)
+            .click();
+
+          await puppeteer.Locator.race([
+            targetPage.locator('div.x9f619 > div.x2lah0s div:nth-of-type(2) > div > div:nth-of-type(1) > div > div > div > div > div > div > div > div > div > div > div.x1iyjqo2 > div > div > div > div > div:nth-of-type(2) div'),
+            targetPage.locator('::-p-xpath(//*[@id=\\":r23:\\"]/div/div/div/div/div/div[2]/div/div[1]/div/div/div/div/div/div/div/div/div/div/div[2]/div/div/div/div/div[2]/span/span/div)'),
+            targetPage.locator(':scope >>> div.x9f619 > div.x2lah0s div:nth-of-type(2) > div > div:nth-of-type(1) > div > div > div > div > div > div > div > div > div > div > div.x1iyjqo2 > div > div > div > div > div:nth-of-type(2) div')
+          ])
+            .setTimeout(timeout)
+            .click({
+              offset: {
+                x: 47,
+                y: 1.515625,
+              },
+            });
+
+          console.log('Pin cerrado con exito!')
+        }
       }
 
       for (const index of [1, 2, 3, 4, 5, 6]) {
