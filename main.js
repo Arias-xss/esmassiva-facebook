@@ -5,7 +5,7 @@ const phoneNumber = process.env.PHONE_NUMBER.split('').splice(1).join('');
 const emailAddress = process.env.EMAIL;
 const password = process.env.PASSWORD;
 
-const timeout = 60000;
+const timeout = 300000;
 
 async function checkMessages(targetPage) {
   console.log("Controlando...")
