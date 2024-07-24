@@ -5,14 +5,101 @@ const phoneNumber = process.env.PHONE_NUMBER.split('').splice(1).join('');
 const emailAddress = process.env.EMAIL;
 const password = process.env.PASSWORD;
 
+const timeout = 60000;
+
+async function checkMessages(targetPage) {
+  console.log("Controlando...")
+  if (await targetPage.evaluate(() => document.querySelector('[aria-label="Cerrar"]') !== null)) {
+    if (await targetPage.evaluate(() => document.querySelector('[aria-label="¿Continuar sin sincronizar?"] > div:nth-of-type(3) > div > div > div:nth-of-type(2)') !== null)) {
+      console.log('Pide PIN para continuar')
+
+      await puppeteer.Locator.race([
+        targetPage.locator('[aria-label="¿Continuar sin sincronizar?"] > div:nth-of-type(3) > div > div > div:nth-of-type(2)'),
+      ])
+        .setTimeout(timeout)
+        .click();
+
+      if (false) {
+        await puppeteer.Locator.race([
+          targetPage.locator('div.x9f619 > div.x2lah0s div:nth-of-type(2) > div > div:nth-of-type(1) > div > div > div > div > div > div > div > div > div > div > div.x1iyjqo2 > div > div > div > div > div:nth-of-type(2) div'),
+          targetPage.locator('::-p-xpath(//*[@id=\\":r23:\\"]/div/div/div/div/div/div[2]/div/div[1]/div/div/div/div/div/div/div/div/div/div/div[2]/div/div/div/div/div[2]/span/span/div)'),
+          targetPage.locator(':scope >>> div.x9f619 > div.x2lah0s div:nth-of-type(2) > div > div:nth-of-type(1) > div > div > div > div > div > div > div > div > div > div > div.x1iyjqo2 > div > div > div > div > div:nth-of-type(2) div')
+        ])
+          .setTimeout(timeout)
+          .click({
+            offset: {
+              x: 47,
+              y: 1.515625,
+            },
+          });
+      }
+
+      console.log('Pin cerrado con exito!')
+    }
+  }
+
+  for (const index of [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16]) {
+    await targetPage.waitForSelector(`[aria-label="Lista de conversaciones"] > div > div:nth-of-type(1) > div:nth-of-type(2) > div > div > div > div > div > div > div:nth-of-type(2) > div > div:nth-of-type(${index}) > div > div > div > div > div > div > div > a > div > div> div:nth-of-type(2) > div > div > div > span`)
+
+    const selectorMessage = await targetPage.$eval(
+      `[aria-label="Lista de conversaciones"] > div > div:nth-of-type(1) > div:nth-of-type(2) > div > div > div > div > div > div > div:nth-of-type(2) > div > div:nth-of-type(${index}) > div > div > div > div > div > div > div > a > div > div> div:nth-of-type(2) > div > div > div > span`,
+      (element) => {
+        const computedStyle = window.getComputedStyle(element);
+        return computedStyle.fontWeight;
+      })
+
+    console.log(`Mensaje leido? ${selectorMessage != '600' ? 'Si' : 'No'}`)
+
+    if (selectorMessage == '600') {
+      await puppeteer.Locator.race([
+        targetPage.locator(`[aria-label="Lista de conversaciones"] > div > div:nth-of-type(1) > div:nth-of-type(2) > div > div > div > div > div > div > div:nth-of-type(2) > div > div:nth-of-type(${index})`),
+      ])
+        .setTimeout(timeout)
+        .click();
+
+      await puppeteer.Locator.race([
+        targetPage.locator('[aria-label="Mensaje"]'),
+        targetPage.locator('p-aria(Mensaje)'),
+      ])
+        .setTimeout(timeout)
+        .click();
+
+      const selectorText = await targetPage.$eval('[aria-label^="Conversación"]', (element) => {
+        return element.innerText
+      })
+      const cleanText = selectorText.split('·')[1].split('.')[0].trim()
+
+      await puppeteer.Locator.race([
+        targetPage.locator('[aria-label="Mensaje"]'),
+        targetPage.locator('p-aria(Mensaje)'),
+      ]).fill(`Buenas. Si. 😄 Cada pedido es procesado  por Whatsapp ✅ Podes escribirme al Whatsapp 0${phoneNumber} O directo en el link https://wa.me/595${phoneNumber}?text=${encodeURIComponent('Buenas, quisiera mas informacion sobre este producto: ')} 😊 \n`)
+
+      console.log(`Mensaje respondido a este producto: ${cleanText}`)
+
+      await new Promise((resolve, _) => {
+        setTimeout(() => {
+          resolve(null)
+        }, 5000);
+      })
+    }
+  }
+
+  await new Promise((resolve, _) => {
+    setTimeout(async () => {
+      await checkMessages(targetPage)
+      resolve(null)
+    }, 15000);
+  })
+
+}
+
 (async () => {
-  const browser = await puppeteer.launch();
+  const browser = await puppeteer.launch({ headless: false });
 
   const context = browser.defaultBrowserContext()
   await context.overridePermissions('https://www.facebook.com/', ['notifications'])
 
   const page = await browser.newPage();
-  const timeout = 3000000;
   page.setDefaultTimeout(timeout);
 
   {
@@ -211,75 +298,7 @@ const password = process.env.PASSWORD;
       }
     });
 
-    setInterval(async () => {
-      console.log("Controlando...")
-      if (await targetPage.evaluate(() => document.querySelector('[aria-label="Cerrar"]') !== null)) {
-        if (await targetPage.evaluate(() => document.querySelector('[aria-label="¿Continuar sin sincronizar?"] > div:nth-of-type(3) > div > div > div:nth-of-type(2)') !== null)) {
-          console.log('Pide PIN para continuar')
-
-          await puppeteer.Locator.race([
-            targetPage.locator('[aria-label="¿Continuar sin sincronizar?"] > div:nth-of-type(3) > div > div > div:nth-of-type(2)'),
-          ])
-            .setTimeout(timeout)
-            .click();
-
-          await puppeteer.Locator.race([
-            targetPage.locator('div.x9f619 > div.x2lah0s div:nth-of-type(2) > div > div:nth-of-type(1) > div > div > div > div > div > div > div > div > div > div > div.x1iyjqo2 > div > div > div > div > div:nth-of-type(2) div'),
-            targetPage.locator('::-p-xpath(//*[@id=\\":r23:\\"]/div/div/div/div/div/div[2]/div/div[1]/div/div/div/div/div/div/div/div/div/div/div[2]/div/div/div/div/div[2]/span/span/div)'),
-            targetPage.locator(':scope >>> div.x9f619 > div.x2lah0s div:nth-of-type(2) > div > div:nth-of-type(1) > div > div > div > div > div > div > div > div > div > div > div.x1iyjqo2 > div > div > div > div > div:nth-of-type(2) div')
-          ])
-            .setTimeout(timeout)
-            .click({
-              offset: {
-                x: 47,
-                y: 1.515625,
-              },
-            });
-
-          console.log('Pin cerrado con exito!')
-        }
-      }
-
-      for (const index of [1, 2, 3, 4, 5, 6]) {
-        await targetPage.waitForSelector(`[aria-label="Lista de conversaciones"] > div > div:nth-of-type(1) > div:nth-of-type(2) > div > div > div > div > div > div > div:nth-of-type(2) > div > div:nth-of-type(${index}) > div > div > div > div > div > div > div > a > div > div> div:nth-of-type(2) > div > div > div > span`)
-
-        const selectorMessage = await targetPage.$eval(
-          `[aria-label="Lista de conversaciones"] > div > div:nth-of-type(1) > div:nth-of-type(2) > div > div > div > div > div > div > div:nth-of-type(2) > div > div:nth-of-type(${index}) > div > div > div > div > div > div > div > a > div > div> div:nth-of-type(2) > div > div > div > span`,
-          (element) => {
-            const computedStyle = window.getComputedStyle(element);
-            return computedStyle.fontWeight;
-          })
-
-        console.log(`Mensaje leido? ${selectorMessage != '600' ? 'Si' : 'No'}`)
-
-        if (selectorMessage == '600') {
-          await puppeteer.Locator.race([
-            targetPage.locator(`[aria-label="Lista de conversaciones"] > div > div:nth-of-type(1) > div:nth-of-type(2) > div > div > div > div > div > div > div:nth-of-type(2) > div > div:nth-of-type(${index})`),
-          ])
-            .setTimeout(timeout)
-            .click();
-
-          await puppeteer.Locator.race([
-            targetPage.locator('[aria-label="Mensaje"]'),
-            targetPage.locator('p-aria(Mensaje)'),
-          ])
-            .setTimeout(timeout)
-            .click();
-
-          const selectorText = await targetPage.$eval('[aria-label^="Conversación"]', (element) => {
-            return element.innerText
-          })
-          const cleanText = selectorText.split('·')[1].split('.')[0].trim()
-
-          await puppeteer.Locator.race([
-            targetPage.locator('[aria-label="Mensaje"]'),
-            targetPage.locator('p-aria(Mensaje)'),
-          ]).fill(`Buenas. Si. 😄 Cada pedido es procesado  por Whatsapp ✅ Podes escribirme al Whatsapp 0${phoneNumber} O directo en el link https://wa.me/595${phoneNumber}?text=${encodeURIComponent('Buenas, quisiera mas informacion sobre este producto: ')} 😊 \n`)
-
-          console.log(`Mensaje respondido a este producto: ${cleanText}`)
-        }
-      }
-    }, 15000);
+    await checkMessages(targetPage)
   }
 
 })().catch(err => {
