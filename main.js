@@ -94,7 +94,7 @@ async function checkMessages(targetPage) {
 }
 
 (async () => {
-  const browser = await puppeteer.launch({ headless: false });
+  const browser = await puppeteer.launch();
 
   const context = browser.defaultBrowserContext()
   await context.overridePermissions('https://www.facebook.com/', ['notifications'])
