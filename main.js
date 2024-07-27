@@ -91,7 +91,6 @@ const userDataDir = fs.mkdtempSync(path.join(os.tmpdir(), 'puppeteer_profile_'))
   try {
     browser = await puppeteer.launch({
       userDataDir: userDataDir,
-      headless: false
     });
 
     const context = browser.defaultBrowserContext()
