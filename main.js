@@ -91,6 +91,7 @@ const userDataDir = fs.mkdtempSync(path.join(os.tmpdir(), 'puppeteer_profile_'))
   try {
     browser = await puppeteer.launch({
       userDataDir: userDataDir,
+      headless: false
     });
 
     const context = browser.defaultBrowserContext()
@@ -255,7 +256,7 @@ const userDataDir = fs.mkdtempSync(path.join(os.tmpdir(), 'puppeteer_profile_'))
 
       const elementFound = await page.evaluate(() => {
         // Usa XPath para encontrar el elemento
-        const xpath = "//span[contains(text(), 'Marketplace')]";
+        const xpath = "//span[text() = 'Marketplace']";
         const result = document.evaluate(xpath, document, null, XPathResult.FIRST_ORDERED_NODE_TYPE, null);
         const element = result.singleNodeValue;
 
@@ -282,7 +283,7 @@ const userDataDir = fs.mkdtempSync(path.join(os.tmpdir(), 'puppeteer_profile_'))
 
       await page.evaluate(() => {
         // Usa XPath para encontrar el elemento
-        const xpath = "//span[contains(text(), 'Marketplace')]";
+        const xpath = "//span[text() = 'Marketplace']";
         const result = document.evaluate(xpath, document, null, XPathResult.FIRST_ORDERED_NODE_TYPE, null);
         const element = result.singleNodeValue;
 
