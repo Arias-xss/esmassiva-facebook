@@ -7,11 +7,13 @@ const fs = require('fs');
 const phoneNumber = process.env.PHONE_NUMBER.split('').splice(1).join('');
 const emailAddress = process.env.EMAIL;
 const password = process.env.PASSWORD;
+const showBrowser = !(process.env.SHOW_BROWSER === 'S')
 
 const timeout = 300000;
 
-async function checkMessages(targetPage) {
+async function checkMessages(targetPage, controlandoTimes) {
   console.log("Controlando...")
+  controlandoTimes++
   if (await targetPage.evaluate(() => document.querySelector('[aria-label="Cerrar"]') !== null)) {
     if (await targetPage.evaluate(() => document.querySelector('[aria-label="¿Continuar sin sincronizar?"] > div:nth-of-type(3) > div > div > div:nth-of-type(2)') !== null)) {
       console.log('Pide PIN para continuar')
@@ -39,6 +41,7 @@ async function checkMessages(targetPage) {
           return computedStyle.fontWeight;
         })
 
+      controlandoTimes = 0
       console.log(`Mensaje leido? ${selectorMessage != '600' ? 'Si' : 'No'} - POS ${index}`)
 
       if (selectorMessage == '600') {
@@ -76,9 +79,15 @@ async function checkMessages(targetPage) {
     }
   }
 
-  await new Promise((resolve, _) => {
+  await new Promise((resolve, reject) => {
     setTimeout(async () => {
-      await checkMessages(targetPage)
+      console.log("Controlando veces sin responder ", controlandoTimes)
+
+      if(controlandoTimes >= 5){
+        reject(new Error("La cuenta no esta respondiendo correctamente"))
+      }
+      
+      await checkMessages(targetPage, controlandoTimes)
       resolve(null)
     }, 15000);
   })
@@ -91,6 +100,7 @@ const userDataDir = fs.mkdtempSync(path.join(os.tmpdir(), 'puppeteer_profile_'))
   try {
     browser = await puppeteer.launch({
       userDataDir: userDataDir,
+      headless: showBrowser
     });
 
     const context = browser.defaultBrowserContext()
@@ -295,7 +305,8 @@ const userDataDir = fs.mkdtempSync(path.join(os.tmpdir(), 'puppeteer_profile_'))
         }
       });
 
-      await checkMessages(targetPage)
+      var controlandoTimes = 0
+      await checkMessages(targetPage, controlandoTimes)
     }
   } catch (error) {
     console.log(error)
