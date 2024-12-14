@@ -11,6 +11,75 @@ const showBrowser = !(process.env.SHOW_BROWSER === 'S')
 
 const timeout = 300000;
 
+async function loginUser(targetPage) {
+  const promises = [];
+
+  await puppeteer.Locator.race([
+    targetPage.locator('::-p-aria(Correo electrónico o número de teléfono)'),
+    targetPage.locator("[data-testid='royal_email']"),
+    targetPage.locator('::-p-xpath(//*[@data-testid=\\"royal_email\\"])'),
+    targetPage.locator(":scope >>> [data-testid='royal_email']")
+  ])
+    .setTimeout(timeout)
+    .click({
+      offset: {
+        x: 70.5,
+        y: 24,
+      },
+    });
+
+  await puppeteer.Locator.race([
+    targetPage.locator('::-p-aria(Correo electrónico o número de teléfono)'),
+    targetPage.locator("[data-testid='royal_email']"),
+    targetPage.locator('::-p-xpath(//*[@data-testid=\\"royal_email\\"])'),
+    targetPage.locator(":scope >>> [data-testid='royal_email']")
+  ])
+    .setTimeout(timeout)
+    .fill(emailAddress);
+
+  await puppeteer.Locator.race([
+    targetPage.locator('::-p-aria(Contraseña)'),
+    targetPage.locator("[data-testid='royal_pass']"),
+    targetPage.locator('::-p-xpath(//*[@data-testid=\\"royal_pass\\"])'),
+    targetPage.locator(":scope >>> [data-testid='royal_pass']")
+  ])
+    .setTimeout(timeout)
+    .click({
+      offset: {
+        x: 28.5,
+        y: 18,
+      },
+    });
+
+  await puppeteer.Locator.race([
+    targetPage.locator('::-p-aria(Contraseña)'),
+    targetPage.locator("[data-testid='royal_pass']"),
+    targetPage.locator('::-p-xpath(//*[@data-testid=\\"royal_pass\\"])'),
+    targetPage.locator(":scope >>> [data-testid='royal_pass']")
+  ])
+    .setTimeout(timeout)
+    .fill(password);
+
+  const startWaitingForEvents = () => {
+    promises.push(targetPage.waitForNavigation());
+  }
+  await puppeteer.Locator.race([
+    targetPage.locator('::-p-aria(Iniciar sesión[role=\\"button\\"])'),
+    targetPage.locator("[data-testid='royal_login_button']"),
+    targetPage.locator('::-p-xpath(//*[@data-testid=\\"royal_login_button\\"])'),
+    targetPage.locator(":scope >>> [data-testid='royal_login_button']")
+  ])
+    .setTimeout(timeout)
+    .on('action', () => startWaitingForEvents())
+    .click({
+      offset: {
+        x: 48.5,
+        y: 16.921875,
+      },
+    });
+  await Promise.all(promises);
+}
+
 async function checkMessages(targetPage, controlandoTimes) {
   console.log("Controlando...")
   controlandoTimes++
@@ -83,10 +152,10 @@ async function checkMessages(targetPage, controlandoTimes) {
     setTimeout(async () => {
       console.log("Controlando veces sin responder ", controlandoTimes)
 
-      if(controlandoTimes >= 5){
+      if (controlandoTimes >= 5) {
         reject(new Error("La cuenta no esta respondiendo correctamente"))
       }
-      
+
       await checkMessages(targetPage, controlandoTimes)
       resolve(null)
     }, 15000);
@@ -128,83 +197,8 @@ const userDataDir = fs.mkdtempSync(path.join(os.tmpdir(), 'puppeteer_profile_'))
     }
     {
       const targetPage = page;
-      await puppeteer.Locator.race([
-        targetPage.locator('::-p-aria(Correo electrónico o número de teléfono)'),
-        targetPage.locator("[data-testid='royal_email']"),
-        targetPage.locator('::-p-xpath(//*[@data-testid=\\"royal_email\\"])'),
-        targetPage.locator(":scope >>> [data-testid='royal_email']")
-      ])
-        .setTimeout(timeout)
-        .click({
-          offset: {
-            x: 70.5,
-            y: 24,
-          },
-        });
-    }
-    {
-      const targetPage = page;
-      await puppeteer.Locator.race([
-        targetPage.locator('::-p-aria(Correo electrónico o número de teléfono)'),
-        targetPage.locator("[data-testid='royal_email']"),
-        targetPage.locator('::-p-xpath(//*[@data-testid=\\"royal_email\\"])'),
-        targetPage.locator(":scope >>> [data-testid='royal_email']")
-      ])
-        .setTimeout(timeout)
-        .fill(emailAddress);
-    }
-    {
-      const targetPage = page;
-      await puppeteer.Locator.race([
-        targetPage.locator('::-p-aria(Contraseña)'),
-        targetPage.locator("[data-testid='royal_pass']"),
-        targetPage.locator('::-p-xpath(//*[@data-testid=\\"royal_pass\\"])'),
-        targetPage.locator(":scope >>> [data-testid='royal_pass']")
-      ])
-        .setTimeout(timeout)
-        .click({
-          offset: {
-            x: 28.5,
-            y: 18,
-          },
-        });
-    }
-    {
-      const targetPage = page;
-      await puppeteer.Locator.race([
-        targetPage.locator('::-p-aria(Contraseña)'),
-        targetPage.locator("[data-testid='royal_pass']"),
-        targetPage.locator('::-p-xpath(//*[@data-testid=\\"royal_pass\\"])'),
-        targetPage.locator(":scope >>> [data-testid='royal_pass']")
-      ])
-        .setTimeout(timeout)
-        .fill(password);
 
-      console.log('Inicio sesion correctamente')
-    }
-    {
-      const targetPage = page;
-      const promises = [];
-      const startWaitingForEvents = () => {
-        promises.push(targetPage.waitForNavigation());
-      }
-      await puppeteer.Locator.race([
-        targetPage.locator('::-p-aria(Iniciar sesión[role=\\"button\\"])'),
-        targetPage.locator("[data-testid='royal_login_button']"),
-        targetPage.locator('::-p-xpath(//*[@data-testid=\\"royal_login_button\\"])'),
-        targetPage.locator(":scope >>> [data-testid='royal_login_button']")
-      ])
-        .setTimeout(timeout)
-        .on('action', () => startWaitingForEvents())
-        .click({
-          offset: {
-            x: 48.5,
-            y: 16.921875,
-          },
-        });
-      await Promise.all(promises);
-
-      console.log('Ingreso al messenger')
+      await loginUser(targetPage)
     }
     {
       const targetPage = page;
@@ -215,6 +209,24 @@ const userDataDir = fs.mkdtempSync(path.join(os.tmpdir(), 'puppeteer_profile_'))
       startWaitingForEvents();
       await targetPage.goto('https://www.facebook.com/messages/t');
       await Promise.all(promises);
+
+      await new Promise((resolve, _) => {
+        setTimeout(() => {
+          resolve(null)
+        }, 15000);
+      })
+
+      if (await targetPage.evaluate(() => document.querySelector("[aria-label='Correo electrónico o número de teléfono']") !== null)) {
+        await new Promise((resolve, _) => {
+          setTimeout(() => {
+            resolve(null)
+          }, 5000);
+        })
+
+        await loginUser(targetPage)
+      }
+
+      console.log('Ingreso al messenger')
     }
 
     {
