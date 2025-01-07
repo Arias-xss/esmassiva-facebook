@@ -11,6 +11,9 @@ const showBrowser = !(process.env.SHOW_BROWSER === 'S')
 
 const timeout = 300000;
 
+let browser = null;
+const userDataDir = fs.mkdtempSync(path.join(os.tmpdir(), 'puppeteer_profile_'));
+
 async function loginUser(targetPage) {
   const promises = [];
 
@@ -153,7 +156,10 @@ async function checkMessages(targetPage, controlandoTimes) {
       console.log("Controlando veces sin responder ", controlandoTimes)
 
       if (controlandoTimes >= 5) {
-        reject(new Error("La cuenta no esta respondiendo correctamente"))
+        await browser.close();
+        fs.rmdirSync(userDataDir, { recursive: true });
+
+        process.exit(1)
       }
 
       await checkMessages(targetPage, controlandoTimes)
@@ -161,9 +167,6 @@ async function checkMessages(targetPage, controlandoTimes) {
     }, 15000);
   })
 }
-
-let browser = null;
-const userDataDir = fs.mkdtempSync(path.join(os.tmpdir(), 'puppeteer_profile_'));
 
 (async () => {
   try {
