@@ -141,12 +141,6 @@ async function checkMessages(targetPage, controlandoTimes) {
         ]).fill(`Buenas. Si. 😄 Cada pedido es procesado  por Whatsapp ✅ Podes escribirme al Whatsapp 0${phoneNumber} O directo en el link https://wa.me/595${phoneNumber}?text=${encodeURIComponent('Buenas!')} 😊 \n`)
 
         console.log(`Mensaje respondido a este producto: ${cleanText}`)
-
-        await new Promise((resolve, _) => {
-          setTimeout(() => {
-            resolve(null)
-          }, 5000);
-        })
       }
     }
   }
