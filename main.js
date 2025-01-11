@@ -130,17 +130,13 @@ async function checkMessages(targetPage, controlandoTimes) {
           .setTimeout(timeout)
           .click();
 
-        const selectorText = await targetPage.$eval('[aria-label^="Conversación"]', (element) => {
-          return element.innerText
-        })
-        const cleanText = selectorText.split('·')[1].split('.')[0].trim()
-
         await puppeteer.Locator.race([
           targetPage.locator('[aria-label="Mensaje"]'),
           targetPage.locator('p-aria(Mensaje)'),
         ]).fill(`Buenas. Si. 😄 Cada pedido es procesado  por Whatsapp ✅ Podes escribirme al Whatsapp 0${phoneNumber} O directo en el link https://wa.me/595${phoneNumber}?text=${encodeURIComponent('Buenas!')} 😊 \n`)
 
-        console.log(`Mensaje respondido a este producto: ${cleanText}`)
+        // console.log(`Mensaje respondido a este producto: ${cleanText}`)
+        console.log(`Mensaje respondido!`)
       }
     }
   }
