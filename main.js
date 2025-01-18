@@ -3,6 +3,7 @@ require('dotenv').config()
 const path = require('path');
 const os = require('os');
 const fs = require('fs');
+const createCsvWriter = require('csv-writer').createObjectCsvWriter;
 
 const phoneNumber = process.env.PHONE_NUMBER.split('').splice(1).join('');
 const emailAddress = process.env.EMAIL;
@@ -13,6 +14,17 @@ const timeout = 300000;
 
 let browser = null;
 const userDataDir = fs.mkdtempSync(path.join(os.tmpdir(), 'puppeteer_profile_'));
+
+const csvWriter = createCsvWriter({
+  path: 'contacto.csv', // Nombre del archivo
+  header: [
+    { id: 'cliente', title: 'Cliente' },
+    { id: 'producto', title: 'Producto' },
+    { id: 'numero', title: 'Numero' },
+    { id: 'cuenta', title: 'Cuenta' },
+  ],
+  append: fs.existsSync('contacto.csv'), // Si el archivo existe, agrega los datos
+});
 
 async function loginUser(targetPage) {
   const promises = [];
@@ -136,7 +148,7 @@ async function checkMessages(targetPage, controlandoTimes) {
           }, 5000);
         })
 
-        const [customerPhoneNumberValue, chatOpennedValue, secondResponseValue] = await targetPage.evaluate((phoneNumber) => {
+        const [customerPhoneNumberValue, customerDataValue, chatOpennedValue, secondResponseValue] = await targetPage.evaluate((phoneNumber) => {
           // Usa XPath para encontrar el elemento
           const xpath = '//div[contains(@aria-label, "Mensajes de la conversación")]'
           const result = document.evaluate(xpath, document, null, XPathResult.FIRST_ORDERED_NODE_TYPE, null);
@@ -187,24 +199,33 @@ async function checkMessages(targetPage, controlandoTimes) {
               secondResponse = chatItem.innerText.search('si podrias brindarme tu número de celular asi puedo escribirte') > -1
             }
 
-            console.log(`Telefono del cliente: ${customerPhoneNumber}`)
-            console.log(`Chat abierto: ${chatOpenned}`)
-            console.log(`Segunda respuesta: ${secondResponse}`)
+            const customerData = result.singleNodeValue.getAttribute('aria-label').split('·')
+            customerData[0] = customerData[0].replace('Mensajes de la conversación con el título ', '').trim()
 
-            return [customerPhoneNumber, chatOpenned, secondResponse]
+            return [customerPhoneNumber, customerData, chatOpenned, secondResponse]
           }
         }, phoneNumber);
+
+        if (customerPhoneNumberValue) {
+          const records = [
+            { cliente: customerDataValue[0], producto: customerDataValue[1], numero: customerPhoneNumberValue, cuenta: emailAddress },
+          ];
+
+          csvWriter
+            .writeRecords(records)
+            .then(() => console.log('Archivo CSV creado o actualizado correctamente.'));
+        }
 
         if (!chatOpennedValue && !secondResponseValue) {
           await puppeteer.Locator.race([
             targetPage.locator('[aria-label="Mensaje"]'),
             targetPage.locator('p-aria(Mensaje)'),
-          ]).fill(`Buenas. Si. 😄 Cada pedido es procesado  por Whatsapp ✅ Podes escribirme al Whatsapp 0${phoneNumber} O directo en el link https://wa.me/595${phoneNumber}?text=${encodeURIComponent('Buenas!')} 😊`)
+          ]).fill(`Buenas. Si. 😄 Cada pedido es procesado  por Whatsapp ✅ Podes escribirme al Whatsapp 0${phoneNumber} O directo en el link https://wa.me/595${phoneNumber}?text=${encodeURIComponent('Buenas!')} 😊 \n`)
         } else if (chatOpennedValue && !secondResponseValue) {
           await puppeteer.Locator.race([
             targetPage.locator('[aria-label="Mensaje"]'),
             targetPage.locator('p-aria(Mensaje)'),
-          ]).fill(`Para una mejor atención, si podrias brindarme tu número de celular asi puedo escribirte, gracias 😊`)
+          ]).fill(`Para una mejor atención, si podrias brindarme tu número de celular asi puedo escribirte, gracias 😊 \n`)
         }
         // console.log(`Mensaje respondido a este producto: ${cleanText}`)
         console.log(`Mensaje respondido!`)
