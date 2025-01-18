@@ -130,11 +130,82 @@ async function checkMessages(targetPage, controlandoTimes) {
           .setTimeout(timeout)
           .click();
 
-        await puppeteer.Locator.race([
-          targetPage.locator('[aria-label="Mensaje"]'),
-          targetPage.locator('p-aria(Mensaje)'),
-        ]).fill(`Buenas. Si. 😄 Cada pedido es procesado  por Whatsapp ✅ Podes escribirme al Whatsapp 0${phoneNumber} O directo en el link https://wa.me/595${phoneNumber}?text=${encodeURIComponent('Buenas!')} 😊 \n`)
+        await new Promise((resolve, _) => {
+          setTimeout(() => {
+            resolve(null)
+          }, 5000);
+        })
 
+        const [customerPhoneNumberValue, chatOpennedValue, secondResponseValue] = await targetPage.evaluate((phoneNumber) => {
+          // Usa XPath para encontrar el elemento
+          const xpath = '//div[contains(@aria-label, "Mensajes de la conversación")]'
+          const result = document.evaluate(xpath, document, null, XPathResult.FIRST_ORDERED_NODE_TYPE, null);
+
+          if (
+            result.singleNodeValue.childNodes.length > 0 &&
+            result.singleNodeValue.childNodes[0].childNodes.length > 0 &&
+            result.singleNodeValue.childNodes[0].childNodes[0].childNodes.length > 0 &&
+            result.singleNodeValue.childNodes[0].childNodes[0].childNodes[0].childNodes.length > 0
+          ) {
+            const extractAndNormalizePhoneNumber = (message, phone = phoneNumber) => {
+              const phoneRegex = /(?:\+?595|0|9)?\d{7,10}/;
+
+              const match = message.match(phoneRegex);
+
+              if (!match) {
+                return false;
+              }
+
+              // Normalize the captured number
+              let phoneNumberCustomer = match[0];
+
+              // Remove all non-numeric characters
+              phoneNumberCustomer = phoneNumberCustomer.replace(/\D/g, '');
+
+              // If the number starts with '0', remove it
+              if (phoneNumberCustomer.startsWith('0')) {
+                phoneNumberCustomer = phoneNumberCustomer.slice(1);
+              }
+
+              // Add the +595 prefix
+              const normalizedNumber = '+595' + phoneNumberCustomer;
+
+              if (`+595${phone}` === normalizedNumber) {
+                return false
+              }
+
+              return normalizedNumber;
+            }
+
+            var customerPhoneNumber = false
+            var chatOpenned = false
+            var secondResponse = false
+
+            for (const chatItem of result.singleNodeValue.childNodes[0].childNodes[0].childNodes[0].childNodes) {
+              customerPhoneNumber = extractAndNormalizePhoneNumber(chatItem.innerText) !== false ? extractAndNormalizePhoneNumber(chatItem.innerText) : customerPhoneNumber
+              chatOpenned = chatItem.innerText.search('Cada pedido es procesado  por Whatsapp') > -1
+              secondResponse = chatItem.innerText.search('si podrias brindarme tu número de celular asi puedo escribirte') > -1
+            }
+
+            console.log(`Telefono del cliente: ${customerPhoneNumber}`)
+            console.log(`Chat abierto: ${chatOpenned}`)
+            console.log(`Segunda respuesta: ${secondResponse}`)
+
+            return [customerPhoneNumber, chatOpenned, secondResponse]
+          }
+        }, phoneNumber);
+
+        if (!chatOpennedValue && !secondResponseValue) {
+          await puppeteer.Locator.race([
+            targetPage.locator('[aria-label="Mensaje"]'),
+            targetPage.locator('p-aria(Mensaje)'),
+          ]).fill(`Buenas. Si. 😄 Cada pedido es procesado  por Whatsapp ✅ Podes escribirme al Whatsapp 0${phoneNumber} O directo en el link https://wa.me/595${phoneNumber}?text=${encodeURIComponent('Buenas!')} 😊`)
+        } else if (chatOpennedValue && !secondResponseValue) {
+          await puppeteer.Locator.race([
+            targetPage.locator('[aria-label="Mensaje"]'),
+            targetPage.locator('p-aria(Mensaje)'),
+          ]).fill(`Para una mejor atención, si podrias brindarme tu número de celular asi puedo escribirte, gracias 😊`)
+        }
         // console.log(`Mensaje respondido a este producto: ${cleanText}`)
         console.log(`Mensaje respondido!`)
       }
