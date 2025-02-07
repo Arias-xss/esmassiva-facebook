@@ -3,6 +3,7 @@ require('dotenv').config()
 const path = require('path');
 const os = require('os');
 const fs = require('fs');
+const { fetchImageAsBase64, createCaptchaTask, getTaskResult } = require('./utils');
 const createCsvWriter = require('csv-writer').createObjectCsvWriter;
 
 const phoneNumber = process.env.PHONE_NUMBER.split('').splice(1).join('');
@@ -10,7 +11,7 @@ const emailAddress = process.env.EMAIL;
 const password = process.env.PASSWORD;
 const showBrowser = !(process.env.SHOW_BROWSER === 'S')
 
-const timeout = 300000;
+const timeout = 300000000;
 
 let browser = null;
 const userDataDir = fs.mkdtempSync(path.join(os.tmpdir(), 'puppeteer_profile_'));
@@ -31,6 +32,7 @@ async function loginUser(targetPage) {
 
   await puppeteer.Locator.race([
     targetPage.locator('::-p-aria(Correo electrónico o número de teléfono)'),
+    targetPage.locator('::-p-aria(Email or phone number)'),
     targetPage.locator("[data-testid='royal_email']"),
     targetPage.locator('::-p-xpath(//*[@data-testid=\\"royal_email\\"])'),
     targetPage.locator(":scope >>> [data-testid='royal_email']")
@@ -45,6 +47,7 @@ async function loginUser(targetPage) {
 
   await puppeteer.Locator.race([
     targetPage.locator('::-p-aria(Correo electrónico o número de teléfono)'),
+    targetPage.locator('::-p-aria(Email or phone number)'),
     targetPage.locator("[data-testid='royal_email']"),
     targetPage.locator('::-p-xpath(//*[@data-testid=\\"royal_email\\"])'),
     targetPage.locator(":scope >>> [data-testid='royal_email']")
@@ -54,6 +57,7 @@ async function loginUser(targetPage) {
 
   await puppeteer.Locator.race([
     targetPage.locator('::-p-aria(Contraseña)'),
+    targetPage.locator('::-p-aria(Password)'),
     targetPage.locator("[data-testid='royal_pass']"),
     targetPage.locator('::-p-xpath(//*[@data-testid=\\"royal_pass\\"])'),
     targetPage.locator(":scope >>> [data-testid='royal_pass']")
@@ -68,6 +72,7 @@ async function loginUser(targetPage) {
 
   await puppeteer.Locator.race([
     targetPage.locator('::-p-aria(Contraseña)'),
+    targetPage.locator('::-p-aria(Password)'),
     targetPage.locator("[data-testid='royal_pass']"),
     targetPage.locator('::-p-xpath(//*[@data-testid=\\"royal_pass\\"])'),
     targetPage.locator(":scope >>> [data-testid='royal_pass']")
@@ -80,6 +85,7 @@ async function loginUser(targetPage) {
   }
   await puppeteer.Locator.race([
     targetPage.locator('::-p-aria(Iniciar sesión[role=\\"button\\"])'),
+    targetPage.locator('::-p-aria(Log In[role=\\"button\\"])'),
     targetPage.locator("[data-testid='royal_login_button']"),
     targetPage.locator('::-p-xpath(//*[@data-testid=\\"royal_login_button\\"])'),
     targetPage.locator(":scope >>> [data-testid='royal_login_button']")
@@ -287,11 +293,64 @@ async function checkMessages(targetPage, controlandoTimes) {
     }
     {
       const targetPage = page;
-      const promises = [];
+      let promises = [];
       const startWaitingForEvents = () => {
         promises.push(targetPage.waitForNavigation());
       }
+
       startWaitingForEvents();
+
+      // Check for captcha
+      const currentPage = page.url();
+
+      if (currentPage.search('/two_step_verification/authentication/') > -1) {
+        console.log('Pide verificación de captcha')
+
+        if (await targetPage.evaluate(() => document.querySelector('img') !== null && document.querySelector('img').getAttribute('src').search('captcha') > -1)) {
+          const captchaUrl = await targetPage.evaluate(() => document.querySelector('img').getAttribute('src'));
+
+          const base64Image = await fetchImageAsBase64(captchaUrl)
+
+          const taskIdCaptcha = await createCaptchaTask(base64Image)
+
+          await new Promise((resolve, _) => {
+            setTimeout(() => {
+              resolve(null)
+            }, 10000);
+          })
+
+          const captchaText = await getTaskResult(taskIdCaptcha)
+
+          await puppeteer.Locator.race([
+            targetPage.locator('.x1i10hfl.xggy1nq.x1s07b3s.x1kdt53j.x1a2a7pz.xjbqb8w.x1ejq31n.xd10rxx.x1sy0etr.x17r0tee.x9f619.xzsf02u.x1uxerd5.x1fcty0u.x132q4wb.x1a8lsjc.x1pi30zi.x1swvt13.x9desvi.xh8yej3'),
+          ]).fill(captchaText)
+
+          await puppeteer.Locator.race([
+            targetPage.locator('.x1ja2u2z.x78zum5.x2lah0s.x1n2onr6.xl56j7k.x6s0dn4.xozqiw3.x1q0g3np.x972fbf.xcfux6l.x1qhh985.xm0m39n.x9f619.xtvsq51.xi112ho.x17zwfj4.x585lrc.x1403ito.x1fq8qgq.x1ghtduv.x1oktzhs'),
+          ])
+            .setTimeout(timeout)
+            .click({
+              offset: {
+                x: 48.5,
+                y: 16.921875,
+              },
+            });
+
+          promises = [];
+          const startWaitingForEvents = () => {
+            promises.push(targetPage.waitForNavigation());
+          }
+
+          startWaitingForEvents();
+
+          await new Promise((resolve, _) => {
+            setTimeout(() => {
+              resolve(null)
+            }, 15000);
+          })
+        }
+      }
+
       await targetPage.goto('https://www.facebook.com/messages/t');
       await Promise.all(promises);
 
@@ -300,16 +359,6 @@ async function checkMessages(targetPage, controlandoTimes) {
           resolve(null)
         }, 15000);
       })
-
-      if (await targetPage.evaluate(() => document.querySelector("[aria-label='Correo electrónico o número de teléfono']") !== null)) {
-        await new Promise((resolve, _) => {
-          setTimeout(() => {
-            resolve(null)
-          }, 5000);
-        })
-
-        await loginUser(targetPage)
-      }
 
       console.log('Ingreso al messenger')
     }
@@ -323,7 +372,7 @@ async function checkMessages(targetPage, controlandoTimes) {
 
       await new Promise((resolve, reject) => {
         setTimeout(() => {
-          resolve("Eseprandoooo")
+          resolve("Esperando...")
         }, 10000);
       })
 
