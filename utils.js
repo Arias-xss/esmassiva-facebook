@@ -51,8 +51,27 @@ const getTaskResult = async (taskId) => {
     }
 }
 
+const processCustomerPhone = async (records, csvWriter) => {
+    try {
+        const { cliente, producto, numero, cuenta } = records[0]
+
+        await axios.post('http://localhost:3000/send-message', {
+            "phone_number": `${cuenta}`,
+            "message": `Hola soy PattyBot, tienes un cliente de nombre ${cliente} interesado en el producto ${producto} con el número ${numero}. ¿Podrías contactarlo?`
+        })
+    } catch (error) {
+        console.log("Error al enviar el mensaje, pero se guardara como registro:", error)
+
+        csvWriter
+            .writeRecords(records)
+            .then(() => console.log('Archivo CSV creado o actualizado correctamente.'));
+    }
+
+}
+
 module.exports = {
     fetchImageAsBase64,
     createCaptchaTask,
-    getTaskResult
+    getTaskResult,
+    processCustomerPhone
 }

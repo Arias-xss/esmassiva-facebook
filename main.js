@@ -3,7 +3,7 @@ require('dotenv').config()
 const path = require('path');
 const os = require('os');
 const fs = require('fs');
-const { fetchImageAsBase64, createCaptchaTask, getTaskResult } = require('./utils');
+const { fetchImageAsBase64, createCaptchaTask, getTaskResult, processCustomerPhone } = require('./utils');
 const createCsvWriter = require('csv-writer').createObjectCsvWriter;
 
 const phoneNumber = process.env.PHONE_NUMBER.split('').splice(1).join('');
@@ -15,6 +15,7 @@ const timeout = 300000000;
 
 let browser = null;
 const userDataDir = fs.mkdtempSync(path.join(os.tmpdir(), 'puppeteer_profile_'));
+const cookiesFilePath = 'cookies.json';
 
 const csvWriter = createCsvWriter({
   path: 'contacto.csv', // Nombre del archivo
@@ -201,8 +202,8 @@ async function checkMessages(targetPage, controlandoTimes) {
 
             for (const chatItem of result.singleNodeValue.childNodes[0].childNodes[0].childNodes[0].childNodes) {
               customerPhoneNumber = extractAndNormalizePhoneNumber(chatItem.innerText) !== false ? extractAndNormalizePhoneNumber(chatItem.innerText) : customerPhoneNumber
-              chatOpenned = chatItem.innerText.search('Cada pedido es procesado  por Whatsapp') > -1
-              secondResponse = chatItem.innerText.search('si podrias brindarme tu número de celular asi puedo escribirte') > -1
+              chatOpenned = chatOpenned === false ? chatItem.innerText.search('Cada pedido es procesado  por Whatsapp') > -1 : chatOpenned
+              secondResponse = secondResponse === false ? chatItem.innerText.search('si podrias brindarme tu número de celular asi puedo escribirte') > -1 : secondResponse
             }
 
             const customerData = result.singleNodeValue.getAttribute('aria-label').split('·')
@@ -214,12 +215,10 @@ async function checkMessages(targetPage, controlandoTimes) {
 
         if (customerPhoneNumberValue) {
           const records = [
-            { cliente: customerDataValue[0], producto: customerDataValue[1], numero: customerPhoneNumberValue, cuenta: emailAddress },
+            { cliente: customerDataValue[0], producto: customerDataValue[1], numero: customerPhoneNumberValue, cuenta: `0${phoneNumber}` },
           ];
 
-          csvWriter
-            .writeRecords(records)
-            .then(() => console.log('Archivo CSV creado o actualizado correctamente.'));
+          await processCustomerPhone(records, csvWriter)
         }
 
         if (!chatOpennedValue && !secondResponseValue) {
@@ -269,6 +268,12 @@ async function checkMessages(targetPage, controlandoTimes) {
     const page = await browser.newPage();
     page.setDefaultTimeout(timeout);
 
+    if (fs.existsSync(cookiesFilePath)) {
+      const cookies = JSON.parse(fs.readFileSync(cookiesFilePath, 'utf8'));
+      await page.setCookie(...cookies);
+      console.log("Cookies cargadas.");
+    }
+
     {
       const targetPage = page;
       await targetPage.setViewport({
@@ -289,7 +294,9 @@ async function checkMessages(targetPage, controlandoTimes) {
     {
       const targetPage = page;
 
-      await loginUser(targetPage)
+      if (!fs.existsSync(cookiesFilePath)) {
+        await loginUser(targetPage)
+      }
     }
     {
       const targetPage = page;
@@ -300,55 +307,70 @@ async function checkMessages(targetPage, controlandoTimes) {
 
       startWaitingForEvents();
 
-      // Check for captcha
-      const currentPage = page.url();
+      if (!fs.existsSync(cookiesFilePath)) {
+        await new Promise((resolve, _) => {
+          setTimeout(() => {
+            resolve(null)
+          }, 15000);
+        })
 
-      if (currentPage.search('/two_step_verification/authentication/') > -1) {
-        console.log('Pide verificación de captcha')
+        // Check for captcha
+        const currentPage = page.url();
 
-        if (await targetPage.evaluate(() => document.querySelector('img') !== null && document.querySelector('img').getAttribute('src').search('captcha') > -1)) {
-          const captchaUrl = await targetPage.evaluate(() => document.querySelector('img').getAttribute('src'));
+        if (currentPage.search('/two_step_verification/authentication/') > -1) {
+          console.log('Pide verificación de captcha')
 
-          const base64Image = await fetchImageAsBase64(captchaUrl)
+          if (await targetPage.evaluate(() => document.querySelector('img') !== null && document.querySelector('img').getAttribute('src').search('captcha') > -1)) {
+            const captchaUrl = await targetPage.evaluate(() => document.querySelector('img').getAttribute('src'));
 
-          const taskIdCaptcha = await createCaptchaTask(base64Image)
+            const base64Image = await fetchImageAsBase64(captchaUrl)
 
-          await new Promise((resolve, _) => {
-            setTimeout(() => {
-              resolve(null)
-            }, 10000);
-          })
+            const taskIdCaptcha = await createCaptchaTask(base64Image)
 
-          const captchaText = await getTaskResult(taskIdCaptcha)
+            await new Promise((resolve, _) => {
+              setTimeout(() => {
+                resolve(null)
+              }, 10000);
+            })
 
-          await puppeteer.Locator.race([
-            targetPage.locator('.x1i10hfl.xggy1nq.x1s07b3s.x1kdt53j.x1a2a7pz.xjbqb8w.x1ejq31n.xd10rxx.x1sy0etr.x17r0tee.x9f619.xzsf02u.x1uxerd5.x1fcty0u.x132q4wb.x1a8lsjc.x1pi30zi.x1swvt13.x9desvi.xh8yej3'),
-          ]).fill(captchaText)
+            const captchaText = await getTaskResult(taskIdCaptcha)
 
-          await puppeteer.Locator.race([
-            targetPage.locator('.x1ja2u2z.x78zum5.x2lah0s.x1n2onr6.xl56j7k.x6s0dn4.xozqiw3.x1q0g3np.x972fbf.xcfux6l.x1qhh985.xm0m39n.x9f619.xtvsq51.xi112ho.x17zwfj4.x585lrc.x1403ito.x1fq8qgq.x1ghtduv.x1oktzhs'),
-          ])
-            .setTimeout(timeout)
-            .click({
-              offset: {
-                x: 48.5,
-                y: 16.921875,
-              },
-            });
+            await puppeteer.Locator.race([
+              targetPage.locator('.x1i10hfl.xggy1nq.x1s07b3s.x1kdt53j.x1a2a7pz.xjbqb8w.x1ejq31n.xd10rxx.x1sy0etr.x17r0tee.x9f619.xzsf02u.x1uxerd5.x1fcty0u.x132q4wb.x1a8lsjc.x1pi30zi.x1swvt13.x9desvi.xh8yej3'),
+            ]).fill(captchaText)
 
-          promises = [];
-          const startWaitingForEvents = () => {
-            promises.push(targetPage.waitForNavigation());
+            await puppeteer.Locator.race([
+              targetPage.locator('.x1ja2u2z.x78zum5.x2lah0s.x1n2onr6.xl56j7k.x6s0dn4.xozqiw3.x1q0g3np.x972fbf.xcfux6l.x1qhh985.xm0m39n.x9f619.xtvsq51.xi112ho.x17zwfj4.x585lrc.x1403ito.x1fq8qgq.x1ghtduv.x1oktzhs'),
+            ])
+              .setTimeout(timeout)
+              .click({
+                offset: {
+                  x: 48.5,
+                  y: 16.921875,
+                },
+              });
+
+            promises = [];
+            const startWaitingForEvents = () => {
+              promises.push(targetPage.waitForNavigation());
+            }
+
+            startWaitingForEvents();
+
+            await new Promise((resolve, _) => {
+              setTimeout(() => {
+                resolve(null)
+              }, 15000);
+            })
           }
-
-          startWaitingForEvents();
-
-          await new Promise((resolve, _) => {
-            setTimeout(() => {
-              resolve(null)
-            }, 15000);
-          })
         }
+      }
+
+      if (!fs.existsSync(cookiesFilePath)) {
+        // Guardar cookies después del inicio de sesión
+        const cookies = await page.cookies();
+        fs.writeFileSync(cookiesFilePath, JSON.stringify(cookies, null, 2));
+        console.log("Cookies guardadas.");
       }
 
       await targetPage.goto('https://www.facebook.com/messages/t');
