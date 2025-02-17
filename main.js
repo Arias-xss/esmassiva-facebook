@@ -366,13 +366,6 @@ async function checkMessages(targetPage, controlandoTimes) {
         }
       }
 
-      if (!fs.existsSync(cookiesFilePath)) {
-        // Guardar cookies después del inicio de sesión
-        const cookies = await page.cookies();
-        fs.writeFileSync(cookiesFilePath, JSON.stringify(cookies, null, 2));
-        console.log("Cookies guardadas.");
-      }
-
       await targetPage.goto('https://www.facebook.com/messages/t');
       await Promise.all(promises);
 
@@ -457,6 +450,14 @@ async function checkMessages(targetPage, controlandoTimes) {
       const targetPage = page;
 
       console.log("Empieza a responder los mensajes")
+
+      if (!fs.existsSync(cookiesFilePath)) {
+        // Guardar cookies después del inicio de sesión
+        const cookies = await page.cookies();
+        fs.writeFileSync(cookiesFilePath, JSON.stringify(cookies, null, 2));
+        console.log("Cookies guardadas.");
+      }
+
 
       await page.evaluate(() => {
         // Usa XPath para encontrar el elemento
