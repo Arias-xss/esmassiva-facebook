@@ -43,6 +43,10 @@ const getTaskResult = async (taskId) => {
             "taskId": taskId
         })
 
+        if (response.data.status !== 'ready') {
+            return null
+        }
+
         return response.data.solution.text
     } catch (error) {
         console.error("Error al obtener el resultado de la tarea:", error);

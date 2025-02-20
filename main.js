@@ -11,7 +11,7 @@ const emailAddress = process.env.EMAIL;
 const password = process.env.PASSWORD;
 const showBrowser = !(process.env.SHOW_BROWSER === 'S')
 
-const timeout = 300000000;
+const timeout = 300000;
 
 let browser = null;
 const userDataDir = fs.mkdtempSync(path.join(os.tmpdir(), 'puppeteer_profile_'));
@@ -327,13 +327,21 @@ async function checkMessages(targetPage, controlandoTimes) {
 
             const taskIdCaptcha = await createCaptchaTask(base64Image)
 
-            await new Promise((resolve, _) => {
-              setTimeout(() => {
-                resolve(null)
-              }, 10000);
-            })
+            let captchaText = null;
 
-            const captchaText = await getTaskResult(taskIdCaptcha)
+            do {
+              await new Promise((resolve, _) => {
+                setTimeout(() => {
+                  resolve(null)
+                }, 5000);
+              })
+
+              console.log('Esperando captcha...', taskIdCaptcha)
+
+              captchaText = await getTaskResult(taskIdCaptcha)
+            } while (!captchaText);
+
+            console.log('Captcha resuelto con resultado: ', captchaText)
 
             await puppeteer.Locator.race([
               targetPage.locator('.x1i10hfl.xggy1nq.x1s07b3s.x1kdt53j.x1a2a7pz.xjbqb8w.x1ejq31n.xd10rxx.x1sy0etr.x17r0tee.x9f619.xzsf02u.x1uxerd5.x1fcty0u.x132q4wb.x1a8lsjc.x1pi30zi.x1swvt13.x9desvi.xh8yej3'),
@@ -451,15 +459,9 @@ async function checkMessages(targetPage, controlandoTimes) {
 
       console.log("Empieza a responder los mensajes")
 
-      if (!fs.existsSync(cookiesFilePath)) {
-        // Guardar cookies después del inicio de sesión
-        const cookies = await page.cookies();
-        fs.writeFileSync(cookiesFilePath, JSON.stringify(cookies, null, 2));
-        console.log("Cookies guardadas.");
-      }
 
 
-      await page.evaluate(() => {
+      const evaluateResult = await page.evaluate(() => {
         // Usa XPath para encontrar el elemento
         const xpath = "//span[text() = 'Marketplace']";
         const result = document.evaluate(xpath, document, null, XPathResult.FIRST_ORDERED_NODE_TYPE, null);
@@ -468,11 +470,21 @@ async function checkMessages(targetPage, controlandoTimes) {
         if (element) {
           // Simula un clic en el elemento
           element.click();
+
           return true;
         } else {
           return false;
         }
       });
+
+      if (evaluateResult) {
+        if (!fs.existsSync(cookiesFilePath)) {
+          // Guardar cookies después del inicio de sesión
+          const cookies = await page.cookies();
+          fs.writeFileSync(cookiesFilePath, JSON.stringify(cookies, null, 2));
+          console.log("Cookies guardadas.");
+        }
+      }
 
       var controlandoTimes = 0
       await checkMessages(targetPage, controlandoTimes)
