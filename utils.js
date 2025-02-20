@@ -61,7 +61,7 @@ const processCustomerPhone = async (records, csvWriter) => {
 
         await axios.post('http://localhost:3000/send-message', {
             "phone_number": `${cuenta}`,
-            "message": `Hola soy PattyBot, tienes un cliente de nombre ${cliente} interesado en el producto ${producto} con el número ${numero}. ¿Podrías contactarlo?`
+            "message": `Hola soy MassiBot, tienes un cliente de nombre ${cliente} interesado en el producto ${producto} con el número ${numero}. ¿Podrías contactarlo?`
         })
     } catch (error) {
         console.log("Error al enviar el mensaje, pero se guardara como registro:", error)
