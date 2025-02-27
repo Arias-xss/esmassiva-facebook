@@ -243,7 +243,7 @@ async function checkMessages(targetPage, controlandoTimes) {
     setTimeout(async () => {
       console.log("Controlando veces sin responder ", controlandoTimes)
 
-      if (controlandoTimes >= 555) {
+      if (controlandoTimes >= 5) {
         await browser.close();
         fs.rmdirSync(userDataDir, { recursive: true });
 
