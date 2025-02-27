@@ -105,6 +105,7 @@ async function loginUser(targetPage) {
 async function checkMessages(targetPage, controlandoTimes) {
   console.log("Controlando...")
   controlandoTimes++
+
   if (await targetPage.evaluate(() => document.querySelector('[aria-label="Cerrar"]') !== null)) {
     if (await targetPage.evaluate(() => document.querySelector('[aria-label="¿Continuar sin sincronizar?"] > div:nth-of-type(3) > div > div > div:nth-of-type(2)') !== null)) {
       console.log('Pide PIN para continuar')
@@ -120,13 +121,13 @@ async function checkMessages(targetPage, controlandoTimes) {
   }
 
   for (const index of [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16]) {
-    const listMessages = `[aria-label="Lista de conversaciones"] > div > div:nth-of-type(1) > div:nth-of-type(2) > div > div > div > div > div > div > div:nth-of-type(2) > div > div:nth-of-type(${index}) > div > div > div > div > div > div > div > a > div > div> div:nth-of-type(2) > div > div > div > span`
+    const listMessages = `[aria-label="Lista de conversaciones"] > div > div:nth-of-type(1) > div:nth-of-type(2) > div > div > div > div > div > div > div:nth-of-type(2) > div > div:nth-of-type(${index}) > div > div > div > div > div > div > div> div > a > div > div > div:nth-of-type(2) > div > div > div > span`
 
     if (await targetPage.evaluate((selector) => document.querySelector(selector) !== null, listMessages)) {
-      await targetPage.waitForSelector(`[aria-label="Lista de conversaciones"] > div > div:nth-of-type(1) > div:nth-of-type(2) > div > div > div > div > div > div > div:nth-of-type(2) > div > div:nth-of-type(${index}) > div > div > div > div > div > div > div > a > div > div> div:nth-of-type(2) > div > div > div > span`)
+      await targetPage.waitForSelector(`[aria-label="Lista de conversaciones"] > div > div:nth-of-type(1) > div:nth-of-type(2) > div > div > div > div > div > div > div:nth-of-type(2) > div > div:nth-of-type(${index}) > div > div > div > div > div > div > div> div > a > div > div > div:nth-of-type(2) > div > div > div > span`)
 
       const selectorMessage = await targetPage.$eval(
-        `[aria-label="Lista de conversaciones"] > div > div:nth-of-type(1) > div:nth-of-type(2) > div > div > div > div > div > div > div:nth-of-type(2) > div > div:nth-of-type(${index}) > div > div > div > div > div > div > div > a > div > div> div:nth-of-type(2) > div > div > div > span`,
+        `[aria-label="Lista de conversaciones"] > div > div:nth-of-type(1) > div:nth-of-type(2) > div > div > div > div > div > div > div:nth-of-type(2) > div > div:nth-of-type(${index}) > div > div > div > div > div > div > div> div > a > div > div > div:nth-of-type(2) > div > div > div > span`,
         (element) => {
           const computedStyle = window.getComputedStyle(element);
           return computedStyle.fontWeight;
@@ -242,7 +243,7 @@ async function checkMessages(targetPage, controlandoTimes) {
     setTimeout(async () => {
       console.log("Controlando veces sin responder ", controlandoTimes)
 
-      if (controlandoTimes >= 5) {
+      if (controlandoTimes >= 555) {
         await browser.close();
         fs.rmdirSync(userDataDir, { recursive: true });
 
@@ -318,10 +319,10 @@ async function checkMessages(targetPage, controlandoTimes) {
         const currentPage = page.url();
 
         if (currentPage.search('/two_step_verification/authentication/') > -1) {
-          console.log('Pide verificación de captcha')
-
           if (await targetPage.evaluate(() => document.querySelector('img') !== null && document.querySelector('img').getAttribute('src').search('captcha') > -1)) {
             const captchaUrl = await targetPage.evaluate(() => document.querySelector('img').getAttribute('src'));
+
+            console.log('Pide verificación de captcha')
 
             const base64Image = await fetchImageAsBase64(captchaUrl)
 
@@ -369,6 +370,14 @@ async function checkMessages(targetPage, controlandoTimes) {
               setTimeout(() => {
                 resolve(null)
               }, 15000);
+            })
+          } else {
+            console.log("El captcha debe ser resulto manualmente")
+
+            await new Promise((resolve, _) => {
+              setTimeout(() => {
+                resolve(null)
+              }, 30000);
             })
           }
         }
@@ -458,8 +467,6 @@ async function checkMessages(targetPage, controlandoTimes) {
       const targetPage = page;
 
       console.log("Empieza a responder los mensajes")
-
-
 
       const evaluateResult = await page.evaluate(() => {
         // Usa XPath para encontrar el elemento
