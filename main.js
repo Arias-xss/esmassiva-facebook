@@ -326,144 +326,144 @@ async function checkMessages(targetPage, controlandoTimes) {
         }
         // console.log(`Mensaje respondido a este producto: ${cleanText}`)
         console.log(`Mensaje respondido!`);
-      }
+      } else {
+        // Flujo de recordatorio
+        const messageTimeSent = await targetPage.$eval(
+          `[aria-label="Lista de conversaciones"] > div > div:nth-of-type(1) > div:nth-of-type(2) > div > div > div > div > div > div > div:nth-of-type(2) > div > div:nth-of-type(${index}) > div > div > div > div > div > div > div> div > a > div > div > div:nth-of-type(2) > div > div > div > div:nth-of-type(2) > span:nth-of-type(3)`,
+          (element) => element.innerText
+        );
+        const messageWasViewed = await targetPage.evaluate(
+          (selector) => document.querySelector(selector) !== null,
+          `[aria-label="Lista de conversaciones"] > div > div:nth-of-type(1) > div:nth-of-type(2) > div > div > div > div > div > div > div:nth-of-type(2) > div > div:nth-of-type(${index}) > div > div > div > div > div > div > div> div > a > div > div > div:nth-of-type(3) > div > div > div`
+        );
+        const minumumMinutes = 40; // 40 minutos minimo antes de envio de recordatorio
 
-      // Flujo de recordatorio
-      const messageTimeSent = await targetPage.$eval(
-        `[aria-label="Lista de conversaciones"] > div > div:nth-of-type(1) > div:nth-of-type(2) > div > div > div > div > div > div > div:nth-of-type(2) > div > div:nth-of-type(${index}) > div > div > div > div > div > div > div> div > a > div > div > div:nth-of-type(2) > div > div > div > div:nth-of-type(2) > span:nth-of-type(3)`,
-        (element) => element.innerText
-      );
-      const messageWasViewed = await targetPage.evaluate(
-        (selector) => document.querySelector(selector) !== null,
-        `[aria-label="Lista de conversaciones"] > div > div:nth-of-type(1) > div:nth-of-type(2) > div > div > div > div > div > div > div:nth-of-type(2) > div > div:nth-of-type(${index}) > div > div > div > div > div > div > div> div > a > div > div > div:nth-of-type(3) > div > div > div`
-      );
-      const minumumMinutes = 5;
+        if (extractMinutes(messageTimeSent) > minumumMinutes) {
+          // Entrar al chat y enviar el mensaje de recordatorio para cualquier caso
+          await puppeteer.Locator.race([
+            targetPage.locator(
+              `[aria-label="Lista de conversaciones"] > div > div:nth-of-type(1) > div:nth-of-type(2) > div > div > div > div > div > div > div:nth-of-type(2) > div > div:nth-of-type(${index})`
+            ),
+          ])
+            .setTimeout(timeout)
+            .click();
 
-      if (extractMinutes(messageTimeSent) > minumumMinutes) {
-        // Entrar al chat y enviar el mensaje de recordatorio para cualquier caso
-        await puppeteer.Locator.race([
-          targetPage.locator(
-            `[aria-label="Lista de conversaciones"] > div > div:nth-of-type(1) > div:nth-of-type(2) > div > div > div > div > div > div > div:nth-of-type(2) > div > div:nth-of-type(${index})`
-          ),
-        ])
-          .setTimeout(timeout)
-          .click();
+          await puppeteer.Locator.race([
+            targetPage.locator('[aria-label="Mensaje"]'),
+            targetPage.locator("p-aria(Mensaje)"),
+          ])
+            .setTimeout(timeout)
+            .click();
 
-        await puppeteer.Locator.race([
-          targetPage.locator('[aria-label="Mensaje"]'),
-          targetPage.locator("p-aria(Mensaje)"),
-        ])
-          .setTimeout(timeout)
-          .click();
+          await new Promise((resolve, _) => {
+            setTimeout(() => {
+              resolve(null);
+            }, 5000);
+          });
 
-        await new Promise((resolve, _) => {
-          setTimeout(() => {
-            resolve(null);
-          }, 5000);
-        });
+          const [
+            reminderSeenMessageValue,
+            reminderNonSeenMessageValue,
+            reminder24HoursValue,
+          ] = await targetPage.evaluate(() => {
+            // Usa XPath para encontrar el elemento
+            const xpath =
+              '//div[contains(@aria-label, "Mensajes de la conversación")]';
+            const result = document.evaluate(
+              xpath,
+              document,
+              null,
+              XPathResult.FIRST_ORDERED_NODE_TYPE,
+              null
+            );
 
-        const [
-          reminderSeenMessageValue,
-          reminderNonSeenMessageValue,
-          reminder24HoursValue,
-        ] = await targetPage.evaluate(() => {
-          // Usa XPath para encontrar el elemento
-          const xpath =
-            '//div[contains(@aria-label, "Mensajes de la conversación")]';
-          const result = document.evaluate(
-            xpath,
-            document,
-            null,
-            XPathResult.FIRST_ORDERED_NODE_TYPE,
-            null
-          );
+            if (
+              result.singleNodeValue.childNodes.length > 0 &&
+              result.singleNodeValue.childNodes[0].childNodes.length > 0 &&
+              result.singleNodeValue.childNodes[0].childNodes[0].childNodes
+                .length > 0 &&
+              result.singleNodeValue.childNodes[0].childNodes[0].childNodes[0]
+                .childNodes.length > 0
+            ) {
+              var reminderSeenMessage = false;
+              var reminderNonSeenMessage = false;
+              var reminder24Hours = false;
+
+              for (const chatItem of result.singleNodeValue.childNodes[0]
+                .childNodes[0].childNodes[0].childNodes) {
+                reminderSeenMessage =
+                  reminderSeenMessage === false
+                    ? chatItem.innerText.search(
+                        "Ante cualquier duda estoy aqui para recordarte!"
+                      ) > -1
+                    : reminderSeenMessage;
+                reminderNonSeenMessage =
+                  reminderNonSeenMessage === false
+                    ? chatItem.innerText.search(
+                        "Quedo atento por si no has visto mi mensaje!"
+                      ) > -1
+                    : reminderNonSeenMessage;
+                reminder24Hours =
+                  reminder24Hours === false
+                    ? chatItem.innerText.search(
+                        "Buenas! Seguis interesado en el producto?"
+                      ) > -1
+                    : reminder24Hours;
+              }
+
+              return [
+                reminderSeenMessage,
+                reminderNonSeenMessage,
+                reminder24Hours,
+              ];
+            }
+          });
 
           if (
-            result.singleNodeValue.childNodes.length > 0 &&
-            result.singleNodeValue.childNodes[0].childNodes.length > 0 &&
-            result.singleNodeValue.childNodes[0].childNodes[0].childNodes
-              .length > 0 &&
-            result.singleNodeValue.childNodes[0].childNodes[0].childNodes[0]
-              .childNodes.length > 0
+            extractMinutes(messageTimeSent) / 60 >= 24 &&
+            !reminder24HoursValue &&
+            !reminderNonSeenMessageValue &&
+            !reminderSeenMessageValue
           ) {
-            var reminderSeenMessage = false;
-            var reminderNonSeenMessage = false;
-            var reminder24Hours = false;
+            // 24 horas
+            await puppeteer.Locator.race([
+              targetPage.locator('[aria-label="Mensaje"]'),
+              targetPage.locator("p-aria(Mensaje)"),
+            ]).fill(`Buenas! Seguis interesado en el producto? \n`);
 
-            for (const chatItem of result.singleNodeValue.childNodes[0]
-              .childNodes[0].childNodes[0].childNodes) {
-              reminderSeenMessage =
-                reminderSeenMessage === false
-                  ? chatItem.innerText.search(
-                      "Ante cualquier duda estoy aqui para recordarte!"
-                    ) > -1
-                  : reminderSeenMessage;
-              reminderNonSeenMessage =
-                reminderNonSeenMessage === false
-                  ? chatItem.innerText.search(
-                      "Quedo atento por si no has visto mi mensaje!"
-                    ) > -1
-                  : reminderNonSeenMessage;
-              reminder24Hours =
-                reminder24Hours === false
-                  ? chatItem.innerText.search(
-                      "Buenas! Seguis interesado en el producto?"
-                    ) > -1
-                  : reminder24Hours;
-            }
+            console.log("Recordatorio enviado a las 24 horas");
+          } else if (
+            messageWasViewed &&
+            !reminderNonSeenMessageValue &&
+            !reminderSeenMessageValue &&
+            !reminder24HoursValue
+          ) {
+            await puppeteer.Locator.race([
+              targetPage.locator('[aria-label="Mensaje"]'),
+              targetPage.locator("p-aria(Mensaje)"),
+            ]).fill(`Ante cualquier duda estoy aqui para recordarte! \n`);
 
-            return [
-              reminderSeenMessage,
-              reminderNonSeenMessage,
-              reminder24Hours,
-            ];
+            console.log("Recordatorio enviado a los mensajes vistos");
+          } else if (
+            !messageWasViewed &&
+            !reminderNonSeenMessageValue &&
+            !reminderSeenMessageValue &&
+            !reminder24HoursValue
+          ) {
+            await puppeteer.Locator.race([
+              targetPage.locator('[aria-label="Mensaje"]'),
+              targetPage.locator("p-aria(Mensaje)"),
+            ]).fill(`Quedo atento por si no has visto mi mensaje! \n`);
+
+            console.log("Recordatorio enviado a los mensajes no vistos");
           }
-        });
 
-        if (
-          extractMinutes(messageTimeSent) / 60 >= 24 &&
-          !reminder24HoursValue &&
-          !reminderNonSeenMessageValue &&
-          !reminderSeenMessageValue
-        ) {
-          // 24 horas
-          await puppeteer.Locator.race([
-            targetPage.locator('[aria-label="Mensaje"]'),
-            targetPage.locator("p-aria(Mensaje)"),
-          ]).fill(`Buenas! Seguis interesado en el producto? \n`);
-
-          console.log("Recordatorio enviado a las 24 horas");
-        } else if (
-          messageWasViewed &&
-          !reminderNonSeenMessageValue &&
-          !reminderSeenMessageValue &&
-          !reminder24HoursValue
-        ) {
-          await puppeteer.Locator.race([
-            targetPage.locator('[aria-label="Mensaje"]'),
-            targetPage.locator("p-aria(Mensaje)"),
-          ]).fill(`Ante cualquier duda estoy aqui para recordarte! \n`);
-
-          console.log("Recordatorio enviado a los mensajes vistos");
-        } else if (
-          !messageWasViewed &&
-          !reminderNonSeenMessageValue &&
-          !reminderSeenMessageValue &&
-          !reminder24HoursValue
-        ) {
-          await puppeteer.Locator.race([
-            targetPage.locator('[aria-label="Mensaje"]'),
-            targetPage.locator("p-aria(Mensaje)"),
-          ]).fill(`Quedo atento por si no has visto mi mensaje! \n`);
-
-          console.log("Recordatorio enviado a los mensajes no vistos");
+          await new Promise((resolve, _) => {
+            setTimeout(() => {
+              resolve(null);
+            }, 3000);
+          });
         }
-
-        await new Promise((resolve, _) => {
-          setTimeout(() => {
-            resolve(null);
-          }, 3000);
-        });
       }
     }
   }
