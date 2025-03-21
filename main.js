@@ -328,10 +328,23 @@ async function checkMessages(targetPage, controlandoTimes) {
         console.log(`Mensaje respondido!`);
       } else {
         // Flujo de recordatorio
-        const messageTimeSent = await targetPage.$eval(
-          `[aria-label="Lista de conversaciones"] > div > div:nth-of-type(1) > div:nth-of-type(2) > div > div > div > div > div > div > div:nth-of-type(2) > div > div:nth-of-type(${index}) > div > div > div > div > div > div > div> div > a > div > div > div:nth-of-type(2) > div > div > div > div:nth-of-type(2) > span:nth-of-type(3)`,
-          (element) => element.innerText
+        let messageTimeSent = null;
+
+        messageTimeSent = await targetPage.evaluate(
+          (selector) =>
+            document.querySelector(selector) !== null
+              ? document.querySelector(selector).innerText
+              : "0 min",
+          `[aria-label="Lista de conversaciones"] > div > div:nth-of-type(1) > div:nth-of-type(2) > div > div > div > div > div > div > div:nth-of-type(2) > div > div:nth-of-type(${index}) > div > div > div > div > div > div > div> div > a > div > div > div:nth-of-type(2) > div > div > div > div:nth-of-type(3) > span:nth-of-type(3)`
         );
+
+        if (messageTimeSent == "0 min") {
+          messageTimeSent = await targetPage.evaluate(
+            (selector) => document.querySelector(selector).innerText,
+            `[aria-label="Lista de conversaciones"] > div > div:nth-of-type(1) > div:nth-of-type(2) > div > div > div > div > div > div > div:nth-of-type(2) > div > div:nth-of-type(${index}) > div > div > div > div > div > div > div> div > a > div > div > div:nth-of-type(2) > div > div > div > div:nth-of-type(2) > span:nth-of-type(3)`
+          );
+        }
+
         const messageWasViewed = await targetPage.evaluate(
           (selector) => document.querySelector(selector) !== null,
           `[aria-label="Lista de conversaciones"] > div > div:nth-of-type(1) > div:nth-of-type(2) > div > div > div > div > div > div > div:nth-of-type(2) > div > div:nth-of-type(${index}) > div > div > div > div > div > div > div> div > a > div > div > div:nth-of-type(3) > div > div > div`
@@ -646,7 +659,7 @@ async function checkMessages(targetPage, controlandoTimes) {
 
       await page.waitForSelector("body", { timeout });
 
-      console.log("Ingreso al marketplace");
+      console.log("Ingreso al chat general");
 
       await new Promise((resolve, reject) => {
         setTimeout(() => {
@@ -705,61 +718,46 @@ async function checkMessages(targetPage, controlandoTimes) {
           console.log("Pin cerrado con exito!");
         }
       }
-
-      const elementFound = await page.evaluate(() => {
-        // Usa XPath para encontrar el elemento
-        const xpath = "//span[text() = 'Marketplace']";
-        const result = document.evaluate(
-          xpath,
-          document,
-          null,
-          XPathResult.FIRST_ORDERED_NODE_TYPE,
-          null
-        );
-        const element = result.singleNodeValue;
-
-        if (element) {
-          // Simula un clic en el elemento
-          element.click();
-          return true;
-        } else {
-          return false;
-        }
-      });
-
-      if (elementFound) {
-        console.log("Elemento encontrado y clicado");
-      } else {
-        console.log("Elemento no encontrado");
-      }
     }
 
     {
       const targetPage = page;
 
-      console.log("Empieza a responder los mensajes");
+      let evaluateResult = false;
 
-      const evaluateResult = await page.evaluate(() => {
-        // Usa XPath para encontrar el elemento
-        const xpath = "//span[text() = 'Marketplace']";
-        const result = document.evaluate(
-          xpath,
-          document,
-          null,
-          XPathResult.FIRST_ORDERED_NODE_TYPE,
-          null
-        );
-        const element = result.singleNodeValue;
+      do {
+        evaluateResult = await page.evaluate(() => {
+          // Usa XPath para encontrar el elemento
+          const xpath = "//span[text() = 'Marketplace']";
+          const result = document.evaluate(
+            xpath,
+            document,
+            null,
+            XPathResult.FIRST_ORDERED_NODE_TYPE,
+            null
+          );
+          const element = result.singleNodeValue;
 
-        if (element) {
-          // Simula un clic en el elemento
-          element.click();
+          if (element) {
+            // Simula un clic en el elemento
+            element.click();
 
-          return true;
-        } else {
-          return false;
-        }
-      });
+            return true;
+          } else {
+            return false;
+          }
+        });
+
+        console.log("Controlando btn de marketplace");
+
+        await new Promise((resolve, _) => {
+          setTimeout(() => {
+            resolve(null);
+          }, 2000);
+        });
+      } while (!evaluateResult);
+
+      console.log("Ingreso al marketplace y empieza a responder");
 
       if (evaluateResult) {
         if (!fs.existsSync(cookiesFilePath)) {
